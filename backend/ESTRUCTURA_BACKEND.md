@@ -13,13 +13,15 @@ backend/
 │   ├── modules/
 │   │   ├── core/             Modelos, schemas y rutas institucionales
 │   │   ├── documentos/       Modelos, schemas y rutas de documentos
-│   │   └── pagos_docentes/
-│   │       ├── models/       Modelos separados por entidad
-│   │       └── services/     Reglas de negocio y consultas
+│   │   ├── admisiones/       CRM, seguimiento de prospectos y aspirantes
+│   │   ├── pagos_docentes/
+│   │   │   ├── models/       Modelos separados por entidad
+│   │   │   └── services/     Reglas de negocio y consultas
+│   │   └── vacaciones/       Solicitudes, saldos, permisos, feriados e históricos
 │   ├── routers/              Autenticación y graduación
 │   ├── schemas/              Contratos de autenticación y graduación
 │   └── tasks.py              Tareas Celery
-├── database/                 SQL de inicialización y compatibilidad de pagos
+├── database/                 SQL de inicialización, Admisiones, pagos y Vacaciones
 ├── scripts/                  Utilidades de base de datos y administración
 ├── .env.example              Plantilla de configuración
 └── requirements.txt          Dependencias Python
@@ -27,8 +29,8 @@ backend/
 
 ## Componentes compartidos
 
-- `app/main.py` registra autenticación, Core, documentos, graduación y pagos
-  bajo `/api/v1`; salud está disponible bajo `/api`.
+- `app/main.py` registra autenticación, Core, documentos, graduación, pagos y
+  Vacaciones bajo `/api/v1`; salud está disponible bajo `/api`.
 - `app/core/config.py` carga la configuración del entorno y de `.env`.
   La clave `SECRET_KEY` debe configurarse antes de usar autenticación.
 - `app/core/database.py` comparte una sola clase `Base` y un motor SQLAlchemy
@@ -47,13 +49,25 @@ backend/
 | Core institucional | `app/modules/core/` | `/api/v1/core` |
 | Documentos | `app/modules/documentos/` | `/api/v1/documentos` |
 | Graduación | `app/routers/graduacion.py` | `/api/v1/graduacion` |
+| Admisiones (CRM) | `app/modules/admisiones/` | `/api/v1/admision` |
 | Pagos docentes | `app/modules/pagos_docentes/` | `/api/v1/finance/payments` |
+| Vacaciones | `app/modules/vacaciones/` | `/api/v1/vacaciones` |
 
 El módulo de pagos mantiene sus modelos y servicios propios. Sus referencias a
 tablas del esquema `core` reutilizan las tablas ORM canónicas y se protegen
 contra escrituras desde esas referencias. La API de pagos aún debe cambiar su
 stub de `id_usuario` por la dependencia JWT central y aplicar permisos antes
 de exponerse en producción.
+
+Vacaciones reutiliza el `Base`, las sesiones y la autenticación JWT central.
+Todas sus rutas requieren autenticación. La autorización por propietario de
+solicitud, empleado y rol institucional aún debe definirse antes de habilitar
+el módulo para usuarios finales.
+
+Admisiones reutiliza los modelos Core de personas, empleados y auditoría, así
+como la autenticación JWT central. Sus rutas requieren autenticación; la
+autorización por rol y la validación del responsable frente al usuario
+autenticado aún deben implementarse antes de habilitarlo para usuarios finales.
 
 ## Configuración y ejecución
 

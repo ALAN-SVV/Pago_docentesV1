@@ -1,3 +1,4 @@
+-- Migración vigente de compatibilidad para pagos a docentes.
 BEGIN;
 
 ALTER TABLE pagos_docentes.modulos

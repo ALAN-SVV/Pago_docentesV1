@@ -46,7 +46,7 @@ de FastAPI en `http://localhost:8000/api/docs` y el diagnóstico de API en
 `http://localhost:8000/api/health`. PostgreSQL del proyecto usa el puerto
 `5433`, para no interferir con una instalación local en `5432`.
 
-Docker ejecuta `backend/database/init.sql` únicamente al crear la base en un
+Docker ejecuta `backend/database/pagos_docentes/init.sql` únicamente al crear la base en un
 volumen vacío. No elimina ni actualiza un volumen existente. Por ahora, si
 cambia el esquema, el SQL debe revisarse y aplicarse manualmente; no hay
 migraciones automáticas.
@@ -63,7 +63,7 @@ migraciones automáticas.
 6. `modules/pagos_docentes/models/` define los modelos ORM por responsabilidad y los reexporta desde `__init__.py`.
 7. `modules/pagos_docentes/router.py` expone la API y delega operaciones.
 8. `modules/pagos_docentes/services/` aplica reglas y consulta PostgreSQL.
-9. `database/init.sql` define la estructura inicial de una base nueva.
+9. `database/pagos_docentes/init.sql` define la estructura inicial de una base nueva.
 
 Al crear un pago, la API valida el registro, guarda sus datos en estado
 `borrador` y añade el evento de creación al historial. Los detalles que cambian
@@ -159,7 +159,7 @@ ejemplo, el correo institucional, un sistema académico o un proveedor de pagos.
 | `backend/app/modules/pagos_docentes/schemas.py` | Validación de datos |
 | `backend/app/modules/pagos_docentes/services/` | Reglas de negocio y consultas SQL |
 | `backend/app/modules/pagos_docentes/router.py` | Rutas de la API |
-| `backend/database/init.sql` | Estructura inicial para una base vacía |
+| `backend/database/pagos_docentes/init.sql` | Estructura inicial para una base vacía |
 | `frontend/src/app/core/payments.service.ts` | Llamadas HTTP desde Angular |
 | `frontend/src/app/modules/dashboard/` | Pantalla, formulario y bandeja |
 

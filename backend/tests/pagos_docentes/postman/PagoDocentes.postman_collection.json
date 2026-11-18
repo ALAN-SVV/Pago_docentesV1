@@ -1,0 +1,485 @@
+{
+  "info": {
+    "_postman_id": "ffbc703c-4c75-4af6-a70a-c52f45eeefdc",
+    "name": "ITQ Conecta - Pagos docentes",
+    "description": "Smoke tests de solo lectura y validaciones negativas para la API de Pagos a Docentes. Importa tambien PagoDocentes.local.postman_environment.json y selecciona ese entorno. La coleccion no crea, actualiza ni elimina pagos.\n\nImportante: el router actual no exige JWT y algunas escrituras reciben id_usuario como query param. No expongas la API a usuarios finales ni uses datos de produccion hasta reemplazar ese stub por autenticacion/autorizacion central. Los GET incluidos son de solo lectura.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    {
+      "key": "pageSize",
+      "value": "20"
+    }
+  ],
+  "item": [
+    {
+      "name": "Smoke tests - solo lectura",
+      "item": [
+        {
+          "name": "Resumen financiero",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/finance/payments/summary",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "finance",
+                "payments",
+                "summary"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 200', function () { pm.response.to.have.status(200); });",
+                  "pm.test('Respuesta JSON', function () { pm.response.to.be.json; });",
+                  "pm.test('Contrato del resumen', function () {",
+                  "  const body = pm.response.json();",
+                  "  ['total','borradores','listos','por_pagar','pagados','en_mora','listos_atrasados','monto_pendiente','monto_pagado'].forEach(function (key) { pm.expect(body).to.have.property(key); });",
+                  "  ['total','borradores','listos','por_pagar','pagados','en_mora','listos_atrasados'].forEach(function (key) { pm.expect(body[key]).to.be.a('number'); pm.expect(body[key]).to.be.at.least(0); });",
+                  "});",
+                  "pm.test('Tiempo menor a 3 segundos', function () { pm.expect(pm.response.responseTime).to.be.below(3000); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Seguridad: rechazar bearer inválido (falla actualmente)",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer token-invalido-de-prueba"
+              },
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/finance/payments/summary",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "finance",
+                "payments",
+                "summary"
+              ]
+            },
+            "description": "Prueba de regresión de autenticación. Debe devolver 401 o 403; durante la revisión local respondió 200, por lo que esta prueba queda marcada como falla conocida hasta integrar JWT."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Bearer inválido debe rechazarse con 401 o 403', function () {",
+                  "  pm.expect([401, 403]).to.include(pm.response.code);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Alertas",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/finance/payments/alerts",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "finance",
+                "payments",
+                "alerts"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 200', function () { pm.response.to.have.status(200); });",
+                  "pm.test('Respuesta es una lista JSON', function () { pm.response.to.be.json; pm.expect(pm.response.json()).to.be.an('array'); });",
+                  "pm.test('Forma de cada alerta', function () {",
+                  "  pm.response.json().forEach(function (item) {",
+                  "    ['id_modulo','docente','tipo','estado','fecha_referencia','dias_transcurridos','umbral','unidad'].forEach(function (key) { pm.expect(item).to.have.property(key); });",
+                  "  });",
+                  "});",
+                  "pm.test('Tiempo menor a 3 segundos', function () { pm.expect(pm.response.responseTime).to.be.below(3000); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Configuración de umbral",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/finance/payments/settings",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "finance",
+                "payments",
+                "settings"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 200', function () { pm.response.to.have.status(200); });",
+                  "pm.test('Contrato y valores válidos', function () {",
+                  "  const body = pm.response.json();",
+                  "  pm.expect(body.valor).to.be.a('number').and.to.be.above(0);",
+                  "  pm.expect(['DIAS','MESES']).to.include(body.unidad);",
+                  "  pm.expect(body).to.have.property('correo_notificacion');",
+                  "});",
+                  "pm.test('Tiempo menor a 3 segundos', function () { pm.expect(pm.response.responseTime).to.be.below(3000); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Opciones para el formulario",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/finance/payments/lookups",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "finance",
+                "payments",
+                "lookups"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 200', function () { pm.response.to.have.status(200); });",
+                  "pm.test('Colecciones de docentes, períodos y carreras', function () {",
+                  "  const body = pm.response.json();",
+                  "  ['docentes','periodos','carreras'].forEach(function (key) { pm.expect(body[key]).to.be.an('array'); });",
+                  "  body.docentes.forEach(function (item) { pm.expect(item.id_docente).to.be.a('number'); pm.expect(item.nombre).to.be.a('string'); });",
+                  "  body.periodos.concat(body.carreras).forEach(function (item) { pm.expect(item.id).to.be.a('number'); pm.expect(item.nombre).to.be.a('string'); });",
+                  "});",
+                  "pm.test('Tiempo menor a 3 segundos', function () { pm.expect(pm.response.responseTime).to.be.below(3000); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Listado paginado",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/finance/payments?page=1&page_size={{pageSize}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "finance",
+                "payments"
+              ],
+              "query": [
+                {
+                  "key": "page",
+                  "value": "1"
+                },
+                {
+                  "key": "page_size",
+                  "value": "{{pageSize}}"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 200', function () { pm.response.to.have.status(200); });",
+                  "pm.test('Contrato de paginación', function () {",
+                  "  const body = pm.response.json();",
+                  "  pm.expect(body.items).to.be.an('array');",
+                  "  pm.expect(body.total).to.be.a('number');",
+                  "  pm.expect(body.page).to.eql(1);",
+                  "  pm.expect(body.page_size).to.eql(Number(pm.collectionVariables.get('pageSize')));",
+                  "});",
+                  "pm.test('Tiempo menor a 3 segundos', function () { pm.expect(pm.response.responseTime).to.be.below(3000); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Paginación fuera de rango (422)",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/finance/payments?page=0",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "finance",
+                "payments"
+              ],
+              "query": [
+                {
+                  "key": "page",
+                  "value": "0"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 422 para page=0', function () { pm.response.to.have.status(422); });",
+                  "pm.test('Error de validación JSON', function () { pm.response.to.be.json; pm.expect(pm.response.json().detail).to.be.an('array'); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Mes fuera de rango (422)",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/finance/payments?mes=13",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "finance",
+                "payments"
+              ],
+              "query": [
+                {
+                  "key": "mes",
+                  "value": "13"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 422 para mes=13', function () { pm.response.to.have.status(422); });",
+                  "pm.test('Error de validación JSON', function () { pm.response.to.be.json; pm.expect(pm.response.json().detail).to.be.an('array'); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Estado inválido (422)",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/finance/payments?estado=ESTADO_INVALIDO",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "finance",
+                "payments"
+              ],
+              "query": [
+                {
+                  "key": "estado",
+                  "value": "ESTADO_INVALIDO"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 422 para estado inválido', function () { pm.response.to.have.status(422); });",
+                  "pm.test('Error de validación JSON', function () { pm.response.to.be.json; pm.expect(pm.response.json().detail).to.be.an('array'); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Historial de identificador inexistente (404)",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/finance/payments/{{paymentId}}/history",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "finance",
+                "payments",
+                "{{paymentId}}",
+                "history"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 404 para módulo inexistente', function () { pm.response.to.have.status(404); });",
+                  "pm.test('Error JSON', function () { pm.response.to.be.json; pm.expect(pm.response.json()).to.have.property('detail'); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Crear pago con cuerpo inválido (422, sin escritura)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\"nombre_modulo\":\"\"}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/finance/payments?id_usuario={{actorId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "finance",
+                "payments"
+              ],
+              "query": [
+                {
+                  "key": "id_usuario",
+                  "value": "{{actorId}}"
+                }
+              ]
+            },
+            "description": "Validación negativa únicamente. El body omite las referencias requeridas, por lo que FastAPI debe responder 422 antes de ejecutar el servicio y sin insertar datos."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 422 antes de ejecutar la creación', function () { pm.response.to.have.status(422); });",
+                  "pm.test('Respuesta de validación estructurada', function () { pm.response.to.be.json; pm.expect(pm.response.json().detail).to.be.an('array'); });"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

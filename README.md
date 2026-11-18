@@ -1,159 +1,74 @@
-en # ITQ Conecta
+# ITQ Conecta — Backend
 
-Scaffold inicial para la plataforma modular ITQ Conecta:
+Este repositorio reúne el backend que he ido desarrollando e integrando para
+ITQ Conecta. Está hecho con FastAPI, SQLAlchemy asíncrono y PostgreSQL. Incluye
+autenticación y los módulos institucionales de Core, Documentos, Graduación,
+Admisiones (CRM), Pagos a Docentes y Vacaciones.
 
-- Frontend Angular 22 standalone, Angular Material y Signals.
-- Backend FastAPI con Pydantic v2 y SQLAlchemy 2.0 async.
-- PostgreSQL 16 con `uuid-ossp` y Redis para Celery, iniciables con Docker Compose.
-- Módulos institucionales de autenticación, Core, documentos, graduación y pagos
-  a docentes, reunidos en `backend/`.
+## Módulos y estado actual
 
-La carpeta `itq_backend/` se conserva como respaldo de origen; usa únicamente
-`backend/` para ejecutar la aplicación. Su archivo de entorno no se copió.
+| Módulo | Qué incluye | Qué falta o debo mejorar |
+|---|---|---|
+| Autenticación y Core | Usuarios, roles, permisos, catálogos y acceso con JWT. | Configurar `SECRET_KEY` en el entorno, probar el inicio de sesión completo y definir permisos por rol para cada operación. |
+| Documentos | Rutas y modelos para documentos, archivos, versiones y revisiones. | Crear/verificar sus cuatro tablas en la base de desarrollo y probar el flujo completo de archivos y revisiones. |
+| Graduación | Eventos, pases y validación por QR o cédula. | Alinear cuatro columnas que faltan en las tablas `graduacion.pases` y `graduacion.qr`, y volver a probar sus rutas con la base. |
+| Admisiones (CRM) | Prospectos, responsables, seguimientos, cambios de estado y conversión a aspirantes. | Añadir permisos por rol y comprobar que el responsable de cada acción corresponda al usuario autenticado. |
+| Pagos a Docentes | Registro, filtros, estados de pago, historial, resumen y alertas visibles en la API. | Cambiar el identificador de usuario temporal por JWT, añadir permisos por rol y probar las escrituras con usuarios y referencias reales. Los importes siguen siendo manuales. |
+| Vacaciones | Solicitudes, saldos, aprobaciones, permisos, feriados e históricos. | Añadir permisos por rol y comprobar la relación entre el usuario autenticado, los empleados y las solicitudes. |
+| Celery y correo | La aplicación Celery está preparada para ampliarse. | Implementar las tareas de alertas/correo y configurar y probar Redis; por ahora las tareas de negocio no están terminadas. |
 
-## Estado reciente del backend (2 de noviembre de 2026)
+Estos pendientes son parte del trabajo por completar; no significa que todas las
+rutas estén listas para exponerse a usuarios finales.
 
-Se adaptaron los modelos Core y la autenticación para reflejar los tipos
-booleanos y la nulabilidad observados en PostgreSQL. La aplicación carga, sus
-51 rutas aparecen en OpenAPI y las consultas de solo lectura probadas contra
-las tablas Core verificadas son aceptadas por la base. No se ejecutaron
-migraciones ni escrituras; tampoco se ha validado un login real. Antes de probar
-JWT, configura `SECRET_KEY` en `backend/.env`.
+## Ejecutar en Windows
 
-El detalle de cambios, verificaciones, versiones detectadas y pendientes está
-en [backend/README.md](backend/README.md#estado-de-core-y-autenticacion-2-de-noviembre-de-2026).
-
-## Requisitos
-
-- Node.js 22.12 o superior y npm.
-- Python 3.12 o superior.
-- Docker Desktop con Docker Compose (para PostgreSQL y Redis).
-
-Compose publica PostgreSQL en el puerto `5433` para no interferir con una
-instalación local de PostgreSQL que ya utilice el puerto `5432`.
-
-## Inicio local en Windows
-
-Desde la raíz del repositorio, prepara los servicios y el entorno de Python:
+Desde la raíz del repositorio:
 
 ```powershell
-docker compose up -d
 py -3.12 -m venv .venv
 .\.venv\Scripts\Activate.ps1
 pip install -r backend\requirements.txt
 if (!(Test-Path backend\.env)) { Copy-Item backend\.env.example backend\.env }
-# Configura DATABASE_URL y reemplaza SECRET_KEY por una clave segura en backend\.env.
 ```
 
-En una terminal, inicia FastAPI:
+Configura `DATABASE_URL` y una `SECRET_KEY` propia en `backend\.env`. No
+compartas ese archivo ni lo subas a GitHub. Después, inicia la API:
 
 ```powershell
 Set-Location backend
 ..\.venv\Scripts\python.exe -m uvicorn app.main:app --reload
 ```
 
-El servicio PostgreSQL de Compose publica el puerto `5433`. Ten en cuenta que
-`backend/database/init.sql` es un DDL legado del esquema `financiera`, no el
-esquema que consume el backend unificado. `backend/scripts/create_schemas.sql`
-crea Core, documentos y graduación, pero no crea las tablas actuales de
-`pagos_docentes`. Por eso, un volumen nuevo no queda listo para atender todas
-las rutas: usa una base ya preparada o completa y valida un script de
-inicialización para los cuatro esquemas antes de ejecutarlo. Compose solo
-ejecuta los SQL de inicialización al crear un volumen vacío; los existentes no
-se modifican automáticamente.
+La documentación interactiva queda en <http://localhost:8000/api/docs> y el
+estado de la API en <http://localhost:8000/api/health>.
 
-En otra terminal, inicia Angular:
+## Base de datos
+
+Docker Compose usa `backend/database/pagos_docentes/init.sql` al crear un
+volumen vacío. Ese archivo conserva una inicialización antigua del esquema
+`financiera`; no prepara por sí solo todos los esquemas que necesita el backend.
+Los SQL de Vacaciones son versiones específicas y no se deben ejecutar en
+bloque sobre una base existente. Revisa las instrucciones de cada módulo y
+compara primero la estructura de la base.
+
+En la base de desarrollo que usé para revisar el backend, faltan las cuatro
+tablas del esquema `docs` y cinco catálogos académicos de `core`. También faltan
+dos columnas en `graduacion.pases` y dos en `graduacion.qr`. La tabla de
+seguimientos de Admisiones sí se creó en esa base. Este estado describe esa
+instalación local; revisa cualquier otra base por separado antes de aplicar
+cambios.
+
+## Pruebas
+
+Desde `backend/`, ejecuta:
 
 ```powershell
-Set-Location frontend
-npm start
+..\.venv\Scripts\python.exe -m pytest -q
 ```
 
-Abre <http://localhost:4200>. Angular reenvía `/api` a FastAPI en el puerto
-8000. La documentación interactiva del backend está en
-<http://localhost:8000/api/docs> y el endpoint de salud en
-<http://localhost:8000/api/health>.
+La suite pasó 135 pruebas en la revisión local. También comprobé la carga de la
+aplicación y el registro de 92 rutas en OpenAPI. Esto no sustituye pruebas de
+escritura y de flujos completos contra una base de datos de prueba.
 
-Redis y Celery están preparados en la infraestructura, pero el módulo de pagos
-actual no requiere ni ejecuta un worker. Las credenciales de desarrollo de
-Compose están en `compose.yaml`; cámbialas antes de cualquier despliegue real.
-
-## Módulo financiero: pagos a docentes
-
-La pantalla principal y la API cubren por ahora el registro de pagos por
-docente/módulo, filtros por periodo, mes y carrera, flujo borrador → listo →
-aprobado → pagado, historial de cambios, resumen financiero y umbral configurable
-para alertas de atraso.
-
-El formulario permite elegir el modelo Carrera o Validación y registrar sus
-campos académicos, requisitos, seguimiento, factura y datos económicos. Los
-importes se capturan manualmente: las fórmulas de los Excel no se ejecutan porque
-algunas reglas aún deben confirmarse con Financiero. Las hojas financieras de
-los Excel son reportes agregados y no se importan como pagos individuales.
-
-El resumen muestra pagos aprobados sin pagar y pagos listos sin aprobar que
-superan el umbral configurado. Los días y contadores se calculan en SQL; por
-ahora son indicadores en pantalla y no se envían notificaciones automáticas.
-Las aprobaciones son manuales hasta que se confirme el proveedor de correo
-institucional. El backend incluye autenticación JWT para los módulos institucionales. El
-módulo de pagos todavía conserva un identificador de usuario temporal por
-query string y no aplica RBAC; no lo expongas en producción hasta conectarlo
-con la autenticación central y sus permisos.
-
-La documentación detallada del alcance, modelos Excel, base de datos, API,
-estado actual y próximos pasos está en
-[docs/modulo-pagos-docentes.md](docs/modulo-pagos-docentes.md).
-
-## Actualización del frontend — 2 de noviembre de 2026
-
-El módulo de Pagos a Docentes se reorganizó en
-`frontend/src/app/modules/pago_docentes/`. La página coordina el dashboard y
-sus responsabilidades se distribuyeron entre componentes para el filtro de
-carreras, el resumen, la bandeja, las acciones y el formulario. El alta se
-divide en secciones académicas, valores del pago y seguimiento; los modelos y
-el servicio HTTP también están separados. Se conservó el formulario reactivo
-y el flujo existente.
-
-Se añadieron sugerencias de carreras agrupadas por área, búsqueda que ignora
-tildes y navegación por teclado. El formulario y las acciones se cargan bajo
-demanda para respetar el presupuesto del bundle: la última compilación
-documentada produjo un bundle inicial de 637.43 kB, bajo el límite de 650 kB.
-También se probaron localmente los flujos y se creó el registro ficticio
-`Módulo de prueba visual`; no representa un pago aprobado ni pagado.
-
-**Pendientes:** integrar el inicio de sesión para reemplazar el `id_usuario`
-temporal, configurar `SECRET_KEY` solo en el entorno local, y ofrecer una
-selección independiente para las carreras de Validación. La guía incluye el
-árbol completo del frontend, responsabilidades por archivo, verificaciones,
-hallazgos y próximos pasos:
-[frontend/README_FRONTEND.md](frontend/README_FRONTEND.md).
-
-Rutas API principales:
-
-- `GET/POST /api/v1/finance/payments`
-- `GET /api/v1/finance/payments/summary`
-- `POST /api/v1/finance/payments/{id}/ready`
-- `POST /api/v1/finance/payments/{id}/approval`
-- `POST /api/v1/finance/payments/{id}/paid`
-- `GET /api/v1/finance/payments/{id}/history`
-- `GET/PUT /api/v1/finance/payments/settings`
-
-## Estructura
-
-```text
-backend/
-  app/
-    core/       configuración, seguridad, base de datos, health check y Celery
-    middleware/ excepciones y auditoría
-    modules/    core, documentos y pagos_docentes
-    models/     modelos de graduación
-    routers/    autenticación y graduación
-    schemas/    contratos API
-  database/     SQL para el esquema de pagos
-  scripts/      utilidades de base de datos
-frontend/
-  src/app/
-    core/       servicios compartidos
-    modules/    pantalla de pagos docentes
-    shared/
-```
+Para más detalle sobre la estructura y los pendientes, consulta
+[backend/README.md](backend/README.md).

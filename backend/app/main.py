@@ -3,15 +3,31 @@
 from contextlib import asynccontextmanager
 from collections.abc import AsyncGenerator
 
-from fastapi import FastAPI
+from fastapi import Depends, FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from app.core.config import settings
 from app.core.health import router as health_router
+from app.core.security import get_current_user
 from app.middleware.exceptions import register_exception_handlers
+from app.modules.admisiones.router import router as admisiones_router
 from app.modules.core.routers import core as core_router
 from app.modules.documentos.routers import documentos as documentos_router
 from app.modules.pagos_docentes.router import router as payments_router
+from app.modules.vacaciones.ajustes.router import router as vacaciones_ajustes_router
+from app.modules.vacaciones.aprobaciones.router import (
+    router as vacaciones_aprobaciones_router,
+)
+from app.modules.vacaciones.calculos.router import router as vacaciones_calculos_router
+from app.modules.vacaciones.feriados.router import router as vacaciones_feriados_router
+from app.modules.vacaciones.historicos.router import (
+    router as vacaciones_historicos_router,
+)
+from app.modules.vacaciones.permisos.router import router as vacaciones_permisos_router
+from app.modules.vacaciones.saldos.router import router as vacaciones_saldos_router
+from app.modules.vacaciones.solicitudes.router import (
+    router as vacaciones_solicitudes_router,
+)
 from app.routers import auth, graduacion
 
 
@@ -46,7 +62,24 @@ app.include_router(auth.router, prefix=API_V1_PREFIX)
 app.include_router(core_router.router, prefix=API_V1_PREFIX)
 app.include_router(documentos_router.router, prefix=API_V1_PREFIX)
 app.include_router(graduacion.router, prefix=API_V1_PREFIX)
+app.include_router(admisiones_router, prefix=API_V1_PREFIX)
 app.include_router(payments_router, prefix=API_V1_PREFIX)
+vacation_routers = (
+    vacaciones_ajustes_router,
+    vacaciones_aprobaciones_router,
+    vacaciones_calculos_router,
+    vacaciones_feriados_router,
+    vacaciones_historicos_router,
+    vacaciones_permisos_router,
+    vacaciones_saldos_router,
+    vacaciones_solicitudes_router,
+)
+for vacation_router in vacation_routers:
+    app.include_router(
+        vacation_router,
+        prefix=f"{API_V1_PREFIX}/vacaciones",
+        dependencies=[Depends(get_current_user)],
+    )
 app.include_router(health_router, prefix="/api")
 register_exception_handlers(app)
 

@@ -174,7 +174,7 @@ En los nombres anteriores, `.*` representa los archivos `.ts` y/o `.html` enumer
 - **Bundle sobre el presupuesto:** al añadir las vistas sin carga diferida, el bundle inicial llegó a 655.55 kB y Angular advirtió que superaba el límite de 650 kB. Se difirió la carga del alta y las acciones; el build final midió 637.43 kB y no mostró advertencias.
 - **Autocomplete de Angular Material demasiado pesado:** una primera alternativa para las sugerencias elevó el tamaño del bundle. Se reemplazó por una lista de sugerencias propia y liviana, manteniendo agrupación y accesibilidad por teclado.
 - **Selector de fecha de Angular Material demasiado pesado:** para evitar elevar el bundle se mantuvo el control nativo `type="date"` y se añadieron botones explícitos para abrir el calendario del navegador.
-- **Listado de pagos devolvía HTTP 500:** la base local no tenía algunas columnas que el servicio de pagos esperaba. Se respaldó la base, se aplicó `backend/database/pagos_docentes_runtime_compat_v2.sql` y el endpoint del listado volvió a responder HTTP 200.
+- **Listado de pagos devolvía HTTP 500:** la base local no tenía algunas columnas que el servicio de pagos esperaba. Se respaldó la base, se aplicó `backend/database/pagos_docentes/pagos_docentes_runtime_compat_v2.sql` y el endpoint del listado volvió a responder HTTP 200.
 - **Código concentrado en archivos grandes:** la página/controlador y las plantillas reunían responsabilidades distintas. Se separaron por secciones y componentes para facilitar su mantenimiento sin reescribir los flujos funcionales.
 
 ### Pendientes funcionales o de entorno
